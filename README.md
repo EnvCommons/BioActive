@@ -1,74 +1,89 @@
-# Bioactive
+# BioClassify
 
-Single-turn OpenReward environment for classifying molecules as active or inactive against HIV replication from SMILES notation.
+[![OpenReward Environment](https://img.shields.io/badge/%E2%AD%90%20OpenReward-Environment-f7e6cc)](https://openreward.ai/GeneralReasoning/BioClassify)
 
-## Task
+## Description
 
-Given a molecule's SMILES string, the agent predicts whether the molecule is active (1) or inactive (0) as an HIV replication inhibitor. One tool call per task.
+**BioClassify** is an environment for evaluating agents on bioactivity classification tasks. Given a molecule's SMILES string, the agent predicts whether the molecule is active or inactive as an HIV replication inhibitor. The dataset is derived from the [TDC HIV dataset](https://tdcommons.ai/single_pred_tasks/hts/#hiv) (DTP AIDS Antiviral Screen), containing 41,127 molecules screened for ability to inhibit HIV replication.
 
-## Data Source
+## Capabilities
 
-All data comes from the [TDC HIV dataset](https://tdcommons.ai/single_pred_tasks/hts/#hiv) (DTP AIDS Antiviral Screen), containing 41,127 molecules screened for ability to inhibit HIV replication.
+- Predicting bioactivity from molecular SMILES notation
+- Classifying molecules as active or inactive against HIV replication
+- Understanding structure-activity relationships for antiviral compounds
 
-1,100 molecules sampled (1,000 train + 100 test) with stratified sampling targeting ~30% active compounds to make the task non-trivial while reflecting the imbalanced nature of high-throughput screening data.
+## Compute Requirements
 
-### Data Statistics
+BioClassify does not require a sandbox. It has minimal compute requirements.
+
+## License
+
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (following the TDC dataset license).
+
+## Tasks
+
+There are two splits: train (1,000 tasks) and test (100 tasks). Tasks are sampled from the TDC HIV dataset with stratified sampling targeting ~30% active compounds. Each task presents a molecule's SMILES string and asks the agent to classify it as active (1) or inactive (0) against HIV replication.
 
 | Split | Tasks | Inactive (0) | Active (1) | Active Rate |
 |-------|-------|-------------|------------|-------------|
 | Train | 1,000 | 705 | 295 | 29.5% |
 | Test | 100 | 65 | 35 | 35.0% |
 
-## Reward Function
+## Reward Structure
 
-Binary reward:
+This is a sparse, verifiable reward environment with binary scoring. The agent calls `submit_prediction` once with a classification (0 or 1).
 
+- **Correct**: Reward **1.0**.
+- **Incorrect**: Reward **0.0**.
+
+We do not use LLM graders for this task.
+
+## Data
+
+Task data is derived from the [TDC HIV dataset](https://tdcommons.ai/single_pred_tasks/hts/#hiv) (DTP AIDS Antiviral Screen, 41,127 molecules). Data files are stored on the OpenReward platform.
+
+## Tools
+
+Agents are given a single tool:
+
+- `submit_prediction`: Submit a bioactivity classification (0 = inactive, 1 = active). Returns whether the prediction is correct. This tool can only be called once per task.
+
+## Time Horizon
+
+BioClassify is a single-turn environment. The agent receives a molecule's SMILES string and submits one classification. Each task requires exactly one tool call.
+
+## Environment Difficulty
+
+[Statistics on environment difficulty here]
+
+## Other Environment Requirements
+
+There are no further environment requirements; BioClassify works out of the box with the OpenReward endpoint without any secrets.
+
+## Safety
+
+Agents in BioClassify are asked to classify molecules for bioactivity against HIV replication. The environment does not present direct safety risks, as agents only provide classification predictions with no access to external systems.
+
+However, this is a dual-use domain. Models trained for bioactivity prediction capabilities could potentially be misused for designing harmful compounds in other contexts.
+
+## Citations
+
+```bibtex
+@dataset{GRBioClassify,
+  author    = {General Reasoning Inc. Team},
+  title     = {BioClassify},
+  year      = {2026},
+  publisher = {OpenReward},
+  url       = {https://openreward.ai/GeneralReasoning/BioClassify}
+}
 ```
-reward = 1.0 if predicted == actual else 0.0
-```
 
-## Environment API
-
-- **Splits:** `train` (1,000 tasks), `test` (100 tasks)
-- **Tool:** `submit_prediction(prediction: int)` -- submit 0 (inactive) or 1 (active)
-- **Prompt:** Provides SMILES string and bioactivity endpoint description
-- **Finished:** Always `True` after one tool call (single-turn)
-
-## Files
-
-```
-bioactive/
-├── bioactive.py       # Environment class (Bioactive)
-├── server.py          # Server wrapper
-├── test_agent.py      # OpenAI Responses API test harness
-├── prepare_data.py    # TDC download + JSON generation script
-├── requirements.txt   # openreward, pydantic
-├── Dockerfile
-├── DATA_UPLOAD.md     # Cloud storage upload instructions
-└── data/
-    ├── train.json     # 1,000 training tasks
-    └── test.json      # 100 test tasks
-```
-
-## Local Development
-
-```bash
-# Generate data (requires PyTDC)
-pip install PyTDC pandas
-python prepare_data.py
-
-# Run server
-pip install -r requirements.txt
-python server.py
-
-# Test with agent
-export OPENAI_API_KEY=...
-python test_agent.py
-```
-
-## Docker
-
-```bash
-docker build -t bioactive:test .
-docker run -p 8080:8080 bioactive:test
+```bibtex
+@article{AIDS2004screening,
+  title={AIDS Antiviral Screen Data},
+  author={{National Cancer Institute (NCI)}},
+  journal={DTP AIDS Antiviral Screen},
+  year={2004},
+  note={Available via Therapeutics Data Commons (TDC)}
+}
 ```
