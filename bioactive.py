@@ -55,6 +55,11 @@ ANSWERS = {
 print(f"Loaded {len(ANSWERS)} Bioactive tasks")
 
 
+# Reward for a submission made after the task has already been graded. Negative
+# so repeat submissions are actively discouraged, not merely left unscored.
+REPEAT_SUBMISSION_PENALTY = -0.1
+
+
 class BioactiveTaskSpec(BaseModel):
     task_id: str
     smiles: str
@@ -86,6 +91,12 @@ class Bioactive(Environment):
 
         self.answer = ANSWERS[self.validated.task_id]
 
+        # Graded submissions this session. Only the first is rewarded. This is a
+        # BINARY label, and the feedback states the true one on a wrong guess, so an
+        # uncapped tool scores 1.0 on every task in two calls without predicting
+        # anything: submit 0, read the answer, submit the other value.
+        self.submitted = 0
+
     @classmethod
     def list_splits(cls) -> list[Split]:
         return [
@@ -108,6 +119,17 @@ class Bioactive(Environment):
     @tool
     async def submit_prediction(self, params: SubmitClassificationInput) -> ToolOutput:
         """Submit your bioactivity classification for the molecule (0 = inactive, 1 = active)."""
+        if self.submitted > 0:
+            return ToolOutput(
+                blocks=[TextBlock(text="A prediction has already been submitted for this task. "
+                                       "This episode is over: it is not re-graded, and repeat "
+                                       "submissions are penalised (reward -0.1).")],
+                metadata={"task_id": self.validated.task_id, "already_submitted": True,
+                          "submission_count": self.submitted},
+                reward=REPEAT_SUBMISSION_PENALTY,
+                finished=True,
+            )
+
         predicted = params.prediction
         actual = self.answer["value"]
         correct = predicted == actual
@@ -126,6 +148,8 @@ class Bioactive(Environment):
                 f"against {self.validated.property_name}.\n"
                 f"Reward: {reward:.1f}"
             )
+
+        self.submitted += 1
 
         return ToolOutput(
             blocks=[TextBlock(text=feedback)],
