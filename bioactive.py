@@ -92,9 +92,9 @@ class Bioactive(Environment):
         self.answer = ANSWERS[self.validated.task_id]
 
         # Graded submissions this session. Only the first is rewarded. This is a
-        # BINARY label, and the feedback states the true one on a wrong guess, so an
-        # uncapped tool scores 1.0 on every task in two calls without predicting
-        # anything: submit 0, read the answer, submit the other value.
+        # BINARY label, so an uncapped tool scores 1.0 on every task in two calls
+        # without predicting anything: submit 0, read that it was wrong, submit
+        # the other value.
         self.submitted = 0
 
     @classmethod
@@ -131,6 +131,18 @@ class Bioactive(Environment):
             )
 
         predicted = params.prediction
+        # A value other than 0 or 1 is not a classification, so it is not graded
+        # and does not count as the submission.
+        if predicted not in (0, 1):
+            return ToolOutput(
+                blocks=[TextBlock(text=f"Error: Prediction must be 0 (inactive) or 1 (active), got {predicted}. "
+                                       "Nothing was graded; resubmit with 0 or 1.")],
+                metadata={"task_id": self.validated.task_id, "error": "invalid_prediction",
+                          "predicted": predicted},
+                reward=0.0,
+                finished=False,
+            )
+
         actual = self.answer["value"]
         correct = predicted == actual
         reward = 1.0 if correct else 0.0
@@ -143,8 +155,7 @@ class Bioactive(Environment):
             )
         else:
             feedback = (
-                f"Incorrect. You predicted {'active' if predicted == 1 else 'inactive'}, "
-                f"but the molecule is {'active' if actual == 1 else 'inactive'} "
+                f"Incorrect. You predicted {'active' if predicted == 1 else 'inactive'} "
                 f"against {self.validated.property_name}.\n"
                 f"Reward: {reward:.1f}"
             )
@@ -158,7 +169,6 @@ class Bioactive(Environment):
                 "smiles": self.validated.smiles,
                 "property_name": self.validated.property_name,
                 "predicted": predicted,
-                "actual": actual,
                 "correct": correct,
             },
             reward=reward,
