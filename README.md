@@ -46,7 +46,7 @@ Task data is derived from the [TDC HIV dataset](https://tdcommons.ai/single_pred
 
 Agents are given a single tool:
 
-- `submit_prediction`: Submit a bioactivity classification (0 = inactive, 1 = active). Returns whether the prediction is correct. This tool can only be called once per task.
+- `submit_prediction`: Submit a bioactivity classification (0 = inactive, 1 = active). Returns whether the prediction is correct. The first graded prediction ends the episode; a value other than 0 or 1 is not graded and can be resubmitted.
 
 ## Time Horizon
 

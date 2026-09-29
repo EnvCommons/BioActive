@@ -131,6 +131,18 @@ class Bioactive(Environment):
             )
 
         predicted = params.prediction
+        # A value other than 0 or 1 is not a classification, so it is not graded
+        # and does not count as the submission.
+        if predicted not in (0, 1):
+            return ToolOutput(
+                blocks=[TextBlock(text=f"Error: Prediction must be 0 (inactive) or 1 (active), got {predicted}. "
+                                       "Nothing was graded; resubmit with 0 or 1.")],
+                metadata={"task_id": self.validated.task_id, "error": "invalid_prediction",
+                          "predicted": predicted},
+                reward=0.0,
+                finished=False,
+            )
+
         actual = self.answer["value"]
         correct = predicted == actual
         reward = 1.0 if correct else 0.0
